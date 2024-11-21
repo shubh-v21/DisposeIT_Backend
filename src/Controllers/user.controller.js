@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { verifyJWT } from "../middlewares/authUser.middleware.js";
+import userValidationSchema from "../validationSchema/userValidationSchema.js";
 //access token aur refresh token generate karne ke liye function
 const generateAccessAndRefreshToken = async (userId) => {
 	try {
@@ -36,6 +37,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
 	const { fullName, email, username, password } = req.body;
 	// console.log("email: ", email);
+	const { error } = userValidationSchema.validate(req.body);
+
+	if (error) {
+		throw new ApiError(400, error.details[0].message);
+	}
 
 	if ([fullName, email, password, username].some((field) => field?.trim() === "")) {
 		throw new ApiError(400, "All fields are required");
@@ -52,7 +58,7 @@ const registerUser = asyncHandler(async (req, res) => {
 	const user = await User.create({
 		fullName,
 
-		email,
+		email: email.toLowerCase(),
 		password,
 		username: username.toLowerCase(),
 	});
@@ -82,6 +88,9 @@ const loginUser = asyncHandler(async (req, res) => {
 	if (!username && !email) {
 		throw new ApiError(401, "Either username or email is required");
 	}
+	if (!password) {
+		throw new ApiError(401, "Password is required");
+	}
 
 	const user = await User.findOne({
 		$or: [{ username }, { email }],
@@ -90,10 +99,10 @@ const loginUser = asyncHandler(async (req, res) => {
 	if (!user) {
 		throw new ApiError(404, "User does not exist");
 	}
-	const isPasswordValid = user.isPasswordCorrect(password);
-
+	const isPasswordValid = await user.isPasswordCorrect(password);
+	console.log("Password validation result:", isPasswordValid);
 	if (!isPasswordValid) {
-		throw new ApiError(401, "User credentials are invalid");
+		throw new ApiError(404, "User credentials are invalid");
 	}
 
 	const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -102,6 +111,7 @@ const loginUser = asyncHandler(async (req, res) => {
 	const options = {
 		httpOnly: true,
 		secure: true,
+		sameSite: true,
 	};
 
 	return res
@@ -141,7 +151,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 	const options = {
 		httpOnly: true,
-		secure: true,
+		Secure: true,
 	};
 
 	return res
