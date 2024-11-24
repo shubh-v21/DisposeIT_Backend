@@ -22,6 +22,7 @@ const generateAccessAndRefreshToken = async (facilityId) => {
 
 const registerFacility = asyncHandler(async (req, res) => {
 	const { error } = facilityValidationSchema.validate(req.body);
+
 	if (error) {
 		console.log(error);
 		throw new ApiError(400, error.details[0].message);
@@ -91,6 +92,7 @@ const registerFacility = asyncHandler(async (req, res) => {
 	return res.status(201).json(new ApiResponse(201, createdFacility, "Facility created successfully"));
 });
 
+//Login of the Facility
 const loginFacility = asyncHandler(async (req, res) => {
 	const { email, password } = req.body;
 
@@ -117,6 +119,7 @@ const loginFacility = asyncHandler(async (req, res) => {
 		.status(200)
 		.cookie("AccessToken", accessToken, options)
 		.cookie("RefreshToken", refreshToken, options)
+		.cookie("role", "facility")
 		.json(
 			new ApiResponse(
 				200,
@@ -130,6 +133,7 @@ const loginFacility = asyncHandler(async (req, res) => {
 		);
 });
 
+//logout of the facility
 const logoutFacility = asyncHandler(async (req, res) => {
 	await Facility.findByIdAndUpdate(
 		req.facility?._id,
@@ -151,10 +155,109 @@ const logoutFacility = asyncHandler(async (req, res) => {
 		.status(200)
 		.clearCookie("AccessToken", options)
 		.clearCookie("RefreshToken", options)
+		.clearCookie("role")
 		.json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
+//get current facility
 const getCurrentFacility = asyncHandler(async (req, res) => {
 	return res.status(200).json(new ApiResponse(200, req.facility, "Facility fetched successfully"));
 });
-export { registerFacility, loginFacility, logoutFacility, getCurrentFacility };
+
+//update facility details
+const updateFacility = asyncHandler(async (req, res) => {
+	const {
+		facilityName,
+		email,
+		state,
+		city,
+		pincode,
+		addressLine1,
+		addressLine2,
+		contactNo,
+		pickupAvailability,
+		openingHours,
+		closingHours,
+		workingDays,
+		wasteTypes,
+	} = req.body;
+
+	if (
+		!facilityName &&
+		!email &&
+		!state &&
+		!city &&
+		!pincode &&
+		!addressLine1 &&
+		!addressLine2 &&
+		!contactNo &&
+		!pickupAvailability &&
+		!openingHours &&
+		!closingHours &&
+		(!workingDays || workingDays.length === 0) &&
+		(!wasteTypes || wasteTypes.length === 0)
+	) {
+		throw new ApiError(400, "Please enter at least one field to update");
+	}
+	const facility = await Facility.findByIdAndUpdate(
+		req.facility?._id,
+		{
+			$set: {
+				facilityName,
+				email,
+				state,
+				city,
+				pincode,
+				addressLine1,
+				addressLine2,
+				contactNo,
+				pickupAvailability,
+				openingHours,
+				closingHours,
+				workingDays,
+				wasteTypes,
+			},
+		},
+		{
+			new: true,
+			select: "-password -refreshToken",
+		}
+	);
+	return res.status(200).json(new ApiResponse(200, facility, "Facility details updated successfully"));
+});
+
+//change current password
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+	const { oldPassword, newPassword, confirmNewPassword } = req.body;
+	const facility = await Facility.findById(req.facility?._id);
+	const isPasswordCorrect = await facility.isPasswordCorrect(oldPassword);
+	if (!isPasswordCorrect) {
+		throw new ApiError(400, "Password is incorrect");
+	}
+	if (newPassword !== confirmNewPassword) {
+		throw new ApiError(400, "New Password and confirm password must be same");
+	}
+	facility.password = newPassword;
+	await facility.save();
+	return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+//logic of deleting entry
+const deleteEntry = asyncHandler(async (req, res) => {
+	const facility = await Facility.findByIdAndDelete(req.facility?._id);
+	if (!facility) {
+		throw new ApiError(500, "Deletion failed or Facility not found");
+	}
+	const options = {
+		httpOnly: true,
+		secure: true,
+		sameSite: "Strict",
+	};
+	return res
+		.status(200)
+		.clearCookie("AccessToken", options)
+		.clearCookie("RefreshToken", options)
+		.clearCookie("role")
+		.json(new ApiResponse(200, {}, "Facility deleted successfully"));
+});
+export { registerFacility, loginFacility, logoutFacility, getCurrentFacility, updateFacility, changeCurrentPassword, deleteEntry };

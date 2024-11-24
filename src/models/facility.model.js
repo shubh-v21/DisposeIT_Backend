@@ -81,6 +81,7 @@ const facilitySchema = new Schema(
 
 facilitySchema.pre("save", async function (next) {
 	if (!this.isModified("password")) return next();
+	// console.log("Plain password: ", this.password);
 
 	this.password = await bcrypt.hash(this.password, 10);
 	next();

@@ -1,5 +1,13 @@
 import { Router } from "express";
-import { registerFacility, loginFacility, logoutFacility, getCurrentFacility } from "../Controllers/facility.controller.js";
+import {
+	registerFacility,
+	loginFacility,
+	logoutFacility,
+	getCurrentFacility,
+	updateFacility,
+	changeCurrentPassword,
+	deleteEntry,
+} from "../Controllers/facility.controller.js";
 import { verifyJWT } from "../middlewares/authFacility.middleware.js";
 
 const router = Router();
@@ -8,5 +16,9 @@ router.route("/login").post(loginFacility);
 
 //Protected routes
 router.route("/logout").post(verifyJWT, logoutFacility);
+router.route("/delete-profile").delete(verifyJWT, deleteEntry);
 router.route("/current-facility").get(verifyJWT, getCurrentFacility);
+router.route("/update-account").patch(verifyJWT, updateFacility);
+router.route("/change-password").post(verifyJWT, changeCurrentPassword);
+
 export default router;

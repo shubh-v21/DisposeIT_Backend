@@ -118,6 +118,7 @@ const loginUser = asyncHandler(async (req, res) => {
 		.status(200)
 		.cookie("AccessToken", accessToken, options)
 		.cookie("RefreshToken", refreshToken, options)
+		.cookie("role", "user")
 		.json(
 			new ApiResponse(
 				200,
@@ -158,6 +159,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 		.status(200)
 		.clearCookie("AccessToken", options)
 		.clearCookie("RefreshToken", options)
+		.clearCookie("role")
 		.json(new ApiResponse(200, {}, "User logged out"));
 });
 
@@ -206,28 +208,66 @@ const logoutUser = asyncHandler(async (req, res) => {
 // 	return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
 // });
 
+//
+
+//logic of get current user
 const getCurrentUser = asyncHandler(async (req, res) => {
 	return res.status(200).json(new ApiResponse(200, req.user, "User fetched successfully"));
 });
 
-// const updateAccountDetails = asyncHandler(async (req, res) => {
-// 	const { fullName, email } = req.body;
+//logic of update account details
+const updateAccountDetails = asyncHandler(async (req, res) => {
+	const { fullName, email, username } = req.body;
 
-// 	if (!fullName && !email) {
-// 		throw new ApiError(400, "Either field is required");
-// 	}
+	if (!fullName && !email && !username) {
+		throw new ApiError(400, "Either field is required");
+	}
 
-// 	const user = await User.findByIdAndUpdate(
-// 		req.user?._id,
-// 		{
-// 			$set: { fullName, email },
-// 		},
-// 		{ new: true, select: "-password" } // Select only required fields
-// 	);
+	const user = await User.findByIdAndUpdate(
+		req.user?._id,
+		{
+			$set: { fullName, email, username },
+		},
+		{ new: true, select: "-password -refreshToken" } // Select only required fields
+	);
 
-// 	// Prepare a sanitized response
+	// Prepare a sanitized response
 
-// 	return res.status(200).json(new ApiResponse(200, user, "Account details updated successfully"));
-// });
+	return res.status(200).json(new ApiResponse(200, user, "Account details updated successfully"));
+});
 
-export { registerUser, loginUser, getCurrentUser, logoutUser };
+//logic of change current password
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+	const { oldPassword, newPassword, confirmNewPassword } = req.body;
+	const user = await User.findById(req.user?._id);
+	const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+	if (!isPasswordCorrect) {
+		throw new ApiError(400, "Password is incorrect");
+	}
+	if (newPassword !== confirmNewPassword) {
+		throw new ApiError(400, "New Password and confirm password must be same");
+	}
+	user.password = newPassword;
+	await user.save();
+	return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+//logic of deleting an entry
+const deleteEntry = asyncHandler(async (req, res) => {
+	const user = await User.findByIdAndDelete(req.user?._id);
+	if (!user) {
+		throw new ApiError(500, "Deletion failed or user not found");
+	}
+	const options = {
+		httpOnly: true,
+		secure: true,
+		sameSite: "Strict",
+	};
+	return res
+		.status(200)
+		.clearCookie("AccessToken", options)
+		.clearCookie("RefreshToken", options)
+		.clearCookie("role")
+		.json(new ApiResponse(200, {}, "User deleted successfully"));
+});
+export { registerUser, loginUser, getCurrentUser, logoutUser, updateAccountDetails, changeCurrentPassword, deleteEntry };
