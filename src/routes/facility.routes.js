@@ -7,12 +7,14 @@ import {
 	updateFacility,
 	changeCurrentPassword,
 	deleteEntry,
+	getAllFacilities,
 } from "../Controllers/facility.controller.js";
 import { verifyJWT } from "../middlewares/authFacility.middleware.js";
 
 const router = Router();
 router.route("/register").post(registerFacility);
 router.route("/login").post(loginFacility);
+router.route("/get-all-facilities").get(getAllFacilities);
 
 //Protected routes
 router.route("/logout").post(verifyJWT, logoutFacility);

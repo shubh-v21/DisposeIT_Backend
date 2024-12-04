@@ -234,6 +234,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 	if (!isPasswordCorrect) {
 		throw new ApiError(400, "Password is incorrect");
 	}
+	const { error } = Joi.object({
+		newPassword: facilityValidationSchema.extract("password"), // Use the password validation from the schema
+	}).validate({ newPassword });
+
+	if (error) {
+		throw new ApiError(400, error.details[0].message);
+	}
 	if (newPassword !== confirmNewPassword) {
 		throw new ApiError(400, "New Password and confirm password must be same");
 	}
@@ -260,4 +267,13 @@ const deleteEntry = asyncHandler(async (req, res) => {
 		.clearCookie("role")
 		.json(new ApiResponse(200, {}, "Facility deleted successfully"));
 });
-export { registerFacility, loginFacility, logoutFacility, getCurrentFacility, updateFacility, changeCurrentPassword, deleteEntry };
+
+//logic of retrieving all facilities from database
+const getAllFacilities = asyncHandler(async (req, res) => {
+	const facilities = await Facility.find();
+	if (!facilities) {
+		throw new ApiError(500, "Facilities can not be retrieved");
+	}
+	return res.status(200).json(new ApiResponse(200, facilities, "Facilities retrieved successfully"));
+});
+export { registerFacility, loginFacility, logoutFacility, getCurrentFacility, updateFacility, changeCurrentPassword, deleteEntry, getAllFacilities };
