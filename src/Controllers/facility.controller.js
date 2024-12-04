@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Facility } from "../models/facility.model.js";
 import facilityValidationSchema from "../validationSchema/facilityValidationSchema.js";
 import { User } from "../models/user.model.js";
+import Joi from "joi";
 const generateAccessAndRefreshToken = async (facilityId) => {
 	try {
 		const facility = await Facility.findById(facilityId);

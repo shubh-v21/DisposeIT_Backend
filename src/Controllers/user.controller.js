@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { verifyJWT } from "../middlewares/authUser.middleware.js";
+import Joi from "joi";
 import userValidationSchema from "../validationSchema/userValidationSchema.js";
 //access token aur refresh token generate karne ke liye function
 const generateAccessAndRefreshToken = async (userId) => {
